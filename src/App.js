@@ -1,11 +1,12 @@
-import { Container, Switch, withStyles } from "@material-ui/core";
-import { grey } from "@material-ui/core/colors";
-import axios from "axios";
-import { useEffect, useState } from "react";
-import "./App.css";
-import Definitions from "./components/Definitions/Definitions";
-import Footer from "./components/Footer/Footer";
-import Header from "./components/header/Header";
+import { Container, Switch } from '@mui/material';
+import { styled } from '@mui/system';
+import { grey } from '@mui/material/colors';
+import axios from 'axios';
+import { useEffect, useState } from 'react';
+import './App.css';
+import Definitions from './components/Definitions/Definitions';
+import Footer from './components/Footer/Footer';
+import Header from './components/header/Header';
 
 function App() {
   const [word, setWord] = useState("");
@@ -31,19 +32,21 @@ function App() {
     // eslint-disable-next-line
   }, [word, category]);
 
-  const PurpleSwitch = withStyles({
-    switchBase: {
-      color: grey[50],
-      "&$checked": {
-        color: grey[900],
-      },
-      "&$checked + $track": {
+  const PurpleSwitch = styled(Switch)(({ theme }) => ({
+  '& .MuiSwitch-switchBase': {
+    color: grey[50],
+    '&.Mui-checked': {
+      color: grey[900],
+      '& + .MuiSwitch-track': {
         backgroundColor: grey[500],
       },
     },
-    checked: {},
-    track: {},
-  })(Switch);
+  },
+  '& .MuiSwitch-track': {
+    backgroundColor: grey[50],
+  },
+}));
+
 
   return (
     <div
