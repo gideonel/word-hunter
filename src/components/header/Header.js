@@ -36,7 +36,7 @@ const Header = ({
 
   return (
     <div className="header">
-      <span className="title">{word ? word : "Word Hunt"}</span>
+      <span className="title">{word ? word : "Word Hunter"}</span>
       <div className="inputs">
         <ThemeProvider theme={darkTheme}>
           <TextField
