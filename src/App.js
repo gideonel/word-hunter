@@ -1,36 +1,120 @@
-import { Container, Switch } from '@mui/material';
-import { styled } from '@mui/system';
-import { grey } from '@mui/material/colors';
-import axios from 'axios';
-import { useEffect, useState } from 'react';
-import './App.css';
-import Definitions from './components/Definitions/Definitions';
-import Footer from './components/Footer/Footer';
-import Header from './components/header/Header';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { Container, Switch } from "@mui/material";
+import { styled } from "@mui/system";
+import { grey } from "@mui/material/colors";
+import Definitions from "./components/Definitions/Definitions";
+import Footer from "./components/Footer/Footer";
+import Header from "./components/header/Header";
 
-function App() {
+let indexedDB;
+let db;
+
+if (typeof window !== "undefined") {
+  indexedDB =
+    window.indexedDB ||
+    window.mozIndexedDB ||
+    window.webkitIndexedDB ||
+    window.msIndexedDB;
+}
+
+const App = () => {
   const [word, setWord] = useState("");
   const [meanings, setMeanings] = useState([]);
   const [category, setCategory] = useState("en");
   const [LightTheme, setLightTheme] = useState(false);
+  const [isOnline, setIsOnline] = useState(true); // Assume online by default
+  const [dbInitialized, setDbInitialized] = useState(false); // Track DB initialization
+
+  useEffect(() => {
+    initDB(); // Initialize IndexedDB
+    checkNetworkStatus(); // Check network status on component mount
+    // eslint-disable-next-line
+  }, []);
+
+  useEffect(() => {
+    if (dbInitialized) {
+      dictionaryApi(); // Fetch data only if the database is initialized
+    }
+  }, [word, category, dbInitialized]);
+
+  const initDB = () => {
+    if (!indexedDB) {
+      console.error("IndexedDB is not supported in this browser");
+      return;
+    }
+
+    const request = indexedDB.open("dictionaryDB", 1);
+
+    request.onerror = function(event) {
+      console.error("Error opening database:", event.target.errorCode);
+    };
+
+    request.onupgradeneeded = function(event) {
+      const db = event.target.result;
+      db.createObjectStore("definitions", { keyPath: "word" });
+    };
+
+    request.onsuccess = function(event) {
+      db = event.target.result;
+      setDbInitialized(true); // Set dbInitialized to true once the database is ready
+    };
+  };
+
+  const checkNetworkStatus = () => {
+    // Simple example using navigator.onLine to check network status
+    setIsOnline(navigator.onLine);
+  };
 
   const dictionaryApi = async () => {
+    if (!db) {
+      console.error("Database is not initialized");
+      return;
+    }
+
     try {
-      const data = await axios.get(
+      const { data } = await axios.get(
         `https://api.dictionaryapi.dev/api/v2/entries/${category}/${word}`
       );
-      setMeanings(data.data);
+      const meaningsData = data;
+      setMeanings(meaningsData);
+
+      // Store data in IndexedDB
+      const transaction = db.transaction(["definitions"], "readwrite");
+      const objectStore = transaction.objectStore("definitions");
+      objectStore.put({ word, meanings: meaningsData });
+
     } catch (error) {
-      console.log(error);
+      console.error("Error fetching data:", error);
+      fetchFromIndexedDB(); // Fetch from IndexedDB on error
     }
   };
 
-  console.log(meanings);
+  const fetchFromIndexedDB = () => {
+    if (!db) {
+      console.error("Database is not initialized");
+      return;
+    }
 
-  useEffect(() => {
-    dictionaryApi();
-    // eslint-disable-next-line
-  }, [word, category]);
+    const transaction = db.transaction(["definitions"], "readonly");
+    const objectStore = transaction.objectStore("definitions");
+    const request = objectStore.get(word);
+
+    request.onsuccess = function(event) {
+      const storedData = event.target.result;
+      if (storedData) {
+        setMeanings(storedData.meanings); // Update state with locally stored data
+      } else {
+        console.log("No data found locally");
+      }
+    };
+
+    request.onerror = function(event) {
+      console.error("Error fetching from IndexedDB:", event.target.errorCode);
+    };
+  };
+
+
 
   const PurpleSwitch = styled(Switch)(({ theme }) => ({
   '& .MuiSwitch-switchBase': {

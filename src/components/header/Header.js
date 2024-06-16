@@ -1,9 +1,7 @@
 import { createTheme, TextField, ThemeProvider } from "@mui/material";
 import React from "react";
-//import { createMuiTheme, TextField, ThemeProvider } from "@material-ui/core/styles";
 import "./Header.css";
 import { MenuItem } from '@mui/material';
-// import MenuItem from "@material-ui/core/MenuItem";
 import countries from "../../data/category";
 import { debounce } from "lodash";
 

@@ -27,6 +27,7 @@
   width: 100%;
   display: flex;
   justify-content: space-around;
+  border-color: 1px solid #fff;
 }
 
 .search {
