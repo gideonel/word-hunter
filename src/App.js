@@ -26,119 +26,115 @@ const App = () => {
   const [dbInitialized, setDbInitialized] = useState(false); // Track DB initialization
 
   useEffect(() => {
+    const initDB = () => {
+      if (!indexedDB) {
+        console.error("IndexedDB is not supported in this browser");
+        return;
+      }
+
+      const request = indexedDB.open("dictionaryDB", 1);
+
+      request.onerror = function (event) {
+        console.error("Error opening database:", event.target.errorCode);
+      };
+
+      request.onupgradeneeded = function (event) {
+        const db = event.target.result;
+        db.createObjectStore("definitions", { keyPath: "word" });
+      };
+
+      request.onsuccess = function (event) {
+        db = event.target.result;
+        console.log("IndexedDB initialized");
+        setDbInitialized(true); // Set dbInitialized to true once the database is ready
+      };
+    };
+
+    const checkNetworkStatus = () => {
+      console.log("Network status:", navigator.onLine ? "Online" : "Offline");
+    };
+
     initDB(); // Initialize IndexedDB
     checkNetworkStatus(); // Check network status on component mount
   }, []);
 
   useEffect(() => {
+    const fetchFromIndexedDB = () => {
+      if (!db) {
+        console.error("Database is not initialized");
+        return;
+      }
+
+      const transaction = db.transaction(["definitions"], "readonly");
+      const objectStore = transaction.objectStore("definitions");
+      const request = objectStore.get(word);
+
+      request.onsuccess = function (event) {
+        const storedData = event.target.result;
+        if (storedData) {
+          console.log("Data fetched from IndexedDB:", storedData);
+          setMeanings(storedData.meanings); // Update state with locally stored data
+        } else {
+          console.log("No data found locally for word:", word);
+        }
+      };
+
+      request.onerror = function (event) {
+        console.error("Error fetching from IndexedDB:", event.target.errorCode);
+      };
+    };
+
+    const dictionaryApi = async () => {
+      if (!db) {
+        console.error("Database is not initialized");
+        return;
+      }
+
+      try {
+        const { data } = await axios.get(
+          `https://api.dictionaryapi.dev/api/v2/entries/${category}/${word}`
+        );
+        const meaningsData = data;
+        setMeanings(meaningsData);
+        console.log("Data fetched from API:", meaningsData);
+
+        // Store data in IndexedDB
+        const transaction = db.transaction(["definitions"], "readwrite");
+        const objectStore = transaction.objectStore("definitions");
+        objectStore.put({ word, meanings: meaningsData });
+
+        transaction.oncomplete = () => {
+          console.log("Data stored in IndexedDB:", { word, meanings: meaningsData });
+        };
+
+        transaction.onerror = (event) => {
+          console.error("Transaction error:", event.target.errorCode);
+        };
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        fetchFromIndexedDB(); // Fetch from IndexedDB on error
+      }
+    };
+
     if (dbInitialized) {
       dictionaryApi(); // Fetch data only if the database is initialized
     }
   }, [word, category, dbInitialized]);
 
-  const initDB = () => {
-    if (!indexedDB) {
-      console.error("IndexedDB is not supported in this browser");
-      return;
-    }
-
-    const request = indexedDB.open("dictionaryDB", 1);
-
-    request.onerror = function (event) {
-      console.error("Error opening database:", event.target.errorCode);
-    };
-
-    request.onupgradeneeded = function (event) {
-      const db = event.target.result;
-      db.createObjectStore("definitions", { keyPath: "word" });
-    };
-
-    request.onsuccess = function (event) {
-      db = event.target.result;
-      console.log("IndexedDB initialized");
-      setDbInitialized(true); // Set dbInitialized to true once the database is ready
-    };
-  };
-
-  const checkNetworkStatus = () => {
-    console.log("Network status:", navigator.onLine ? "Online" : "Offline");
-  };
-
-  const dictionaryApi = async () => {
-    if (!db) {
-      console.error("Database is not initialized");
-      return;
-    }
-
-    try {
-      const { data } = await axios.get(
-        `https://api.dictionaryapi.dev/api/v2/entries/${category}/${word}`
-      );
-      const meaningsData = data;
-      setMeanings(meaningsData);
-      console.log("Data fetched from API:", meaningsData);
-
-      // Store data in IndexedDB
-      const transaction = db.transaction(["definitions"], "readwrite");
-      const objectStore = transaction.objectStore("definitions");
-      objectStore.put({ word, meanings: meaningsData });
-
-      transaction.oncomplete = () => {
-        console.log("Data stored in IndexedDB:", { word, meanings: meaningsData });
-      };
-
-      transaction.onerror = (event) => {
-        console.error("Transaction error:", event.target.errorCode);
-      };
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      fetchFromIndexedDB(); // Fetch from IndexedDB on error
-    }
-  };
-
-  const fetchFromIndexedDB = () => {
-    if (!db) {
-      console.error("Database is not initialized");
-      return;
-    }
-
-    const transaction = db.transaction(["definitions"], "readonly");
-    const objectStore = transaction.objectStore("definitions");
-    const request = objectStore.get(word);
-
-    request.onsuccess = function (event) {
-      const storedData = event.target.result;
-      if (storedData) {
-        console.log("Data fetched from IndexedDB:", storedData);
-        setMeanings(storedData.meanings); // Update state with locally stored data
-      } else {
-        console.log("No data found locally for word:", word);
-      }
-    };
-
-    request.onerror = function (event) {
-      console.error("Error fetching from IndexedDB:", event.target.errorCode);
-    };
-  };
-
-
-
-
   const PurpleSwitch = styled(Switch)(({ theme }) => ({
-  '& .MuiSwitch-switchBase': {
-    color: grey[50],
-    '&.Mui-checked': {
-      color: grey[900],
-      '& + .MuiSwitch-track': {
-        backgroundColor: grey[500],
+    '& .MuiSwitch-switchBase': {
+      color: grey[50],
+      '&.Mui-checked': {
+        color: grey[900],
+        '& + .MuiSwitch-track': {
+          backgroundColor: grey[500],
+        },
       },
     },
-  },
-  '& .MuiSwitch-track': {
-    backgroundColor: grey[50],
-  },
-}));
-
+    '& .MuiSwitch-track': {
+      backgroundColor: grey[50],
+    },
+  }));
 
   return (
     <div
@@ -188,6 +184,6 @@ const App = () => {
       <Footer />
     </div>
   );
-}
+};
 
 export default App;
