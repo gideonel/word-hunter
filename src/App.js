@@ -23,13 +23,11 @@ const App = () => {
   const [meanings, setMeanings] = useState([]);
   const [category, setCategory] = useState("en");
   const [LightTheme, setLightTheme] = useState(false);
-  const [isOnline, setIsOnline] = useState(true); // Assume online by default
   const [dbInitialized, setDbInitialized] = useState(false); // Track DB initialization
 
   useEffect(() => {
     initDB(); // Initialize IndexedDB
     checkNetworkStatus(); // Check network status on component mount
-    // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
@@ -46,24 +44,24 @@ const App = () => {
 
     const request = indexedDB.open("dictionaryDB", 1);
 
-    request.onerror = function(event) {
+    request.onerror = function (event) {
       console.error("Error opening database:", event.target.errorCode);
     };
 
-    request.onupgradeneeded = function(event) {
+    request.onupgradeneeded = function (event) {
       const db = event.target.result;
       db.createObjectStore("definitions", { keyPath: "word" });
     };
 
-    request.onsuccess = function(event) {
+    request.onsuccess = function (event) {
       db = event.target.result;
+      console.log("IndexedDB initialized");
       setDbInitialized(true); // Set dbInitialized to true once the database is ready
     };
   };
 
   const checkNetworkStatus = () => {
-    // Simple example using navigator.onLine to check network status
-    setIsOnline(navigator.onLine);
+    console.log("Network status:", navigator.onLine ? "Online" : "Offline");
   };
 
   const dictionaryApi = async () => {
@@ -78,12 +76,20 @@ const App = () => {
       );
       const meaningsData = data;
       setMeanings(meaningsData);
+      console.log("Data fetched from API:", meaningsData);
 
       // Store data in IndexedDB
       const transaction = db.transaction(["definitions"], "readwrite");
       const objectStore = transaction.objectStore("definitions");
       objectStore.put({ word, meanings: meaningsData });
 
+      transaction.oncomplete = () => {
+        console.log("Data stored in IndexedDB:", { word, meanings: meaningsData });
+      };
+
+      transaction.onerror = (event) => {
+        console.error("Transaction error:", event.target.errorCode);
+      };
     } catch (error) {
       console.error("Error fetching data:", error);
       fetchFromIndexedDB(); // Fetch from IndexedDB on error
@@ -100,19 +106,21 @@ const App = () => {
     const objectStore = transaction.objectStore("definitions");
     const request = objectStore.get(word);
 
-    request.onsuccess = function(event) {
+    request.onsuccess = function (event) {
       const storedData = event.target.result;
       if (storedData) {
+        console.log("Data fetched from IndexedDB:", storedData);
         setMeanings(storedData.meanings); // Update state with locally stored data
       } else {
-        console.log("No data found locally");
+        console.log("No data found locally for word:", word);
       }
     };
 
-    request.onerror = function(event) {
+    request.onerror = function (event) {
       console.error("Error fetching from IndexedDB:", event.target.errorCode);
     };
   };
+
 
 
 
