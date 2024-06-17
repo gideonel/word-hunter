@@ -10,7 +10,7 @@ const Definitions = ({ word, category, meanings, LightTheme }) => {
       {category === "en" && meanings[0] && meanings[0].phonetics && meanings[0].phonetics[0] && meanings[0].phonetics[0].audio && (
               <audio 
                 src={meanings[0].phonetics[0].audio}
-                style={{ backgroundColor:LightTheme ? "#000" : "#fff", color:LightTheme ? "#000" : "#fff"}} 
+                style={{ backgroundColor:LightTheme ? "#3b5360" : "#fff", color:LightTheme ? "#3b5360" : "#fff"}} 
                 controls
               >
                 Your browser doesn't support the audio element.
